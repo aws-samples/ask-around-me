@@ -1,0 +1,349 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Ask Around Me - Example application
+
+Parameters:
+  QuestionsTableName:
+    Type: String
+    Description: Name of Questions DynamoDB table
+    Default: aamQuestions
+
+  QuestionsTableStreamARN:
+    Type: String
+    Description: Stream ARN for Questions DynamoDB table
+    Default: EnterYourStreamARN 
+
+  AnswersTableName:
+    Type: String
+    Description: Name of Answers DynamoDB table
+    Default: aamAnswers
+
+  IoTDataEndpoint:
+    Type: String
+    Description: The IoT data endpoint for the application.
+    Default: YourIOTendpoint
+
+  Auth0issuer:
+    Type: String
+    Description: The issuer URL from your Auth0 account.
+    Default: https://dev-xxxxxxxx.auth0.com/
+
+Globals:
+  Function:
+    Timeout: 5
+    Runtime: nodejs12.x
+    Tags:
+      Application: AskAroundMe
+
+Resources:
+  # HTTP API
+  MyApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      # HTTP API authorizer - see https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-httpapi-httpapiauth.html
+      Auth:
+        Authorizers:
+          MyAuthorizer:
+            JwtConfiguration:
+              issuer: !Ref Auth0issuer
+              audience:
+                - https://auth0-jwt-authorizer
+            IdentitySource: "$request.header.Authorization"
+        DefaultAuthorizer: MyAuthorizer
+
+      # CORS configuration - this is open for development only and should be restricted in prod.
+      # See https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-httpapi-httpapicorsconfiguration.html   
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - POST
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - "*"   
+        AllowOrigins: 
+          - "*"   
+
+  # Functions handling user answers
+  GetAnswersFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: answers/      
+      Handler: get.handler
+      MemorySize: 128
+      Description: Get all answers for a question
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AnswersTableName     
+      Environment:
+        Variables:
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+          TableName: !Ref AnswersTableName  
+      Events:
+        Get:
+          Type: HttpApi
+          Properties:
+            Path: /answers/{Key}
+            Method: get
+            ApiId: !Ref MyApi     
+
+  PostAnswersFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: answers/      
+      Handler: post.handler
+      MemorySize: 128
+      Description: Post new question to an SQS queue
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt StarAnswersQueue.QueueName    
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt GeoAnswersQueue.QueueName               
+      Environment:
+        Variables:
+          StarQueueURL: !Ref StarAnswersQueue          
+          GeoQueueURL: !Ref GeoAnswersQueue      
+      Events:
+        Post:
+          Type: HttpApi
+          Properties:
+            Path: /answers
+            Method: post
+            ApiId: !Ref MyApi        
+
+  DeleteAnswersFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: answers/      
+      Handler: delete.handler
+      MemorySize: 128
+      Description: Delete a single answer      
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AnswersTableName
+      Environment:
+        Variables:
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+          TableName: !Ref AnswersTableName
+      Events:
+        Delete:
+          Type: HttpApi
+          Properties:
+            Path: /answers
+            Method: delete
+            ApiId: !Ref MyApi  
+
+  ProcessAnswerStarFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: answers/processAnswerStar/
+      Handler: app.handler
+      MemorySize: 128
+      Description: Processes SQS queues for incoming star rating answers.      
+      Timeout: 10
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          TableName: !Ref AnswersTableName
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AnswersTableName
+      Events:
+        MySQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt StarAnswersQueue.Arn
+            BatchSize: 10            
+
+  ProcessAnswerGeoFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: answers/processAnswerGeo/
+      Handler: app.handler
+      MemorySize: 128
+      Description: Processes SQS queues for incoming geo answers.      
+      Timeout: 10
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          TableName: !Ref AnswersTableName
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AnswersTableName
+      Events:
+        MySQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt GeoAnswersQueue.Arn
+            BatchSize: 10   
+
+  ## Lambda functions processing DynamoDB streams
+  ProcessAnswersStreamFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: streams/processAnswers/
+      Handler: app.handler
+      MemorySize: 128
+      Description: Aggregates answers data from DDB stream  
+      Timeout: 10
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          TableName: !Ref QuestionsTableName
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref QuestionsTableName
+      Events:
+        Stream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt AnswersTable.StreamArn
+            BatchSize: 100
+            StartingPosition: TRIM_HORIZON
+
+  ProcessQuestionsStreamFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: streams/processQuestions/
+      Handler: app.handler
+      MemorySize: 128
+      Description: Updates IoT topics with changes to Questions DDB table        
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          IOT_DATA_ENDPOINT: !Ref IoTDataEndpoint
+      Policies:
+      - Statement:
+          - Effect: Allow
+            Resource: '*'
+            Action:
+              - iot:*
+      Events:
+        Stream:
+          Type: DynamoDB
+          Properties:
+            Stream: !Ref QuestionsTableStreamARN
+            BatchSize: 100
+            StartingPosition: TRIM_HORIZON
+
+  # Functions handling user questions
+  PostQuestionFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: questions/post/            
+      Handler: app.handler
+      MemorySize: 128
+      Description: Post new question to an SQS queue
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt QuestionsQueue.QueueName             
+      Environment:
+        Variables:
+          QueueName: !Ref QuestionsQueue   
+      Events:
+        PostQuestion:
+          Type: HttpApi
+          Properties:
+            Path: /questions
+            Method: post
+            ApiId: !Ref MyApi
+
+  GetQuestionsFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: questions/get/            
+      Handler: app.handler
+      MemorySize: 2048
+      Description: Returns list of questions from lat/lng query params
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref QuestionsTableName      
+      Environment:
+        Variables:
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+          TableName: !Ref QuestionsTableName
+      Events:
+        GetQuestions:
+          Type: HttpApi
+          Properties:
+            Path: /questions
+            Method: get
+            ApiId: !Ref MyApi
+
+  GetGeoSummaryFunction: 
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: questions/getGeoSummary/            
+      Handler: app.handler
+      MemorySize: 128
+      Description: Returns list of geohashes and scores for single question
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref QuestionsTableName      
+      Environment:
+        Variables:
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+          TableName: !Ref QuestionsTableName
+      Events:
+        GetQuestions:
+          Type: HttpApi
+          Properties:
+            Path: /geoQuestion
+            Method: get
+            ApiId: !Ref MyApi
+
+  ## Lambda functions
+  ProcessQuestionFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: questions/processQuestion/
+      Handler: app.handler
+      MemorySize: 128
+      Timeout: 10
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          TableName: !Ref QuestionsTableName      
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref QuestionsTableName 
+      Events:
+        MySQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt QuestionsQueue.Arn
+            BatchSize: 10
+
+  ## SQS queues
+  QuestionsQueue:
+    Type: AWS::SQS::Queue
+
+  GeoAnswersQueue:
+    Type: AWS::SQS::Queue
+
+  StarAnswersQueue:
+    Type: AWS::SQS::Queue
+
+  ## DynamoDB table
+  AnswersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref AnswersTableName
+      AttributeDefinitions:
+      - AttributeName: PK
+        AttributeType: S
+      - AttributeName: SK
+        AttributeType: S
+      KeySchema:
+      - AttributeName: PK
+        KeyType: HASH
+      - AttributeName: SK
+        KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST    
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES       
+
+Outputs:
+  APIendpoint:
+    Description: "HTTP API endpoint URL"
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com"

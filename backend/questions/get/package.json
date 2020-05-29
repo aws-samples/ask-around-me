@@ -1,0 +1,16 @@
+{
+  "name": "get-questions",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "James Beswick, AWS Serverless",
+  "license": "MIT-0",
+  "dependencies": {
+    "aws-sdk": "^2.658.0",
+    "dynamodb-geo": "^0.4.0"
+  }
+}

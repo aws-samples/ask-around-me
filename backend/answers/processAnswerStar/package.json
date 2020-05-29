@@ -1,0 +1,12 @@
+{
+  "name": "process-answer-star",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "James Beswick, AWS Serverless",
+  "license": "MIT-0",
+  "description": ""
+}

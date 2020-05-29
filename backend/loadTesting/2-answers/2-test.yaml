@@ -1,0 +1,24 @@
+config:
+  target: 'https://<<YOUR_ENDPOINT>>.execute-api.us-east-1.amazonaws.com'
+  phases:
+    - duration: 300
+      arrivalRate: 10
+  processor: "./loadTestFunction.js"          
+  defaults:
+    headers:
+      Authorization: 'Bearer <<ENTER YOUR JWT TOKEN HERE>>'
+scenarios:
+  - flow:
+    - function: "generateRandomData"
+    - post:
+        url: "/answers"
+        json:
+          type: "Star"
+          rating: "{{ rating }}"
+          question: 
+            type: "Star"
+            latitude: 39.08259127440097
+            longitude: -77.46246339003038
+            rangeKey: "testuser|1-1589380702281"
+    - log: "Sent POST request to / with {{ rating }}"
+

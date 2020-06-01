@@ -25,7 +25,7 @@
           <v-btn text color="orange" href="https://bit.ly/askaroundme"  target="_blank">
             Learn more
           </v-btn>
-          <v-btn text color="orange" href="https://github.com/jbesw/ask-around-me/"  target="_blank">
+          <v-btn text color="orange" href="https://github.com/aws-samples/ask-around-me/"  target="_blank">
             GitHub
           </v-btn>
           <v-spacer></v-spacer>

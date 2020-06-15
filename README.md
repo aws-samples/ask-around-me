@@ -2,7 +2,10 @@
 
 This example application shows how to build a serverless web application including features like authentication, geohashing and realtime messaging.
 
-To learn more about how this application works, see the 3-part series on the AWS Compute Blog: https://aws.amazon.com/blogs/compute/building-a-location-based-scalable-serverless-web-app-part-1/.
+To learn more about how this application works, see the 3-part series on the AWS Compute Blog:
+- Part 1: https://aws.amazon.com/blogs/compute/building-a-location-based-scalable-serverless-web-app-part-1/.
+- Part 2: https://aws.amazon.com/blogs/compute/building-a-location-based-scalable-serverless-web-app-part-2/.
+- Part 3: https://aws.amazon.com/blogs/compute/building-a-location-based-scalable-serverless-web-app-part-3/.
 
 Important: this application uses various AWS services and there are costs associated with these services after the Free Tier usage - please see the [AWS Pricing page](https://aws.amazon.com/pricing/) for details. You are responsible for any AWS costs incurred. No warranty is implied in this example.
 

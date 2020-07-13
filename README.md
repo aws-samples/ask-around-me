@@ -101,7 +101,7 @@ The frontend code is saved in the `frontend` subdirectory.
 - Host: your IoT endpoint from earlier.
 - Region: your preferred AWS Region (e.g. us-east-1).
 
-2. Open the `src\auth_config.json` and enter the values from your Auth0 account:
+2. Open the `frontend\auth_config.json` and enter the values from your Auth0 account:
 - domain: this is your account identifier, in the format `dev-12345678.auth0.com`.
 - clientId: a unique string identifying the client application.
 - audience: set to https://auth0-jwt-authorizer.

@@ -2,6 +2,11 @@ AWSTemplateFormatVersion: 2010-09-09
 Transform: AWS::Serverless-2016-10-31
 Description: Ask Around Me - Realtime messaging
 
+# Learn more:
+#  - Creating AWS IoT rules with CloudFormation: https://aws.amazon.com/blogs/iot/bites-of-iot-creating-aws-iot-rules-with-aws-cloudformation/
+#  - IAM in Cognito User Pools: https://docs.aws.amazon.com/cognito/latest/developerguide/resource-permissions.html
+#  - Pub/Sub policy for unauthenticated clients: https://docs.aws.amazon.com/iot/latest/developerguide/pub-sub-policy.html
+
 Resources:
   ##########################################
   # Resources for realtime messaging       #
@@ -66,12 +71,22 @@ Resources:
             Statement: 
               - Effect: "Allow"
                 Action:
-                  - "mobileanalytics:PutEvents"
                   - "cognito-sync:*"
-                  - "iot:*"
+                Resource: !Join [ "", [ "arn:aws:cognito-sync:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":identitypool/", !Ref IdentityPool] ]
+              - Effect: Allow
+                Action:
+                  - iot:Connect
+                Resource: !Join [ "", [ "arn:aws:iot:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":client/askAroundMe-*" ] ]
+              - Effect: Allow
+                Action:
+                  - iot:Subscribe
                 Resource: "*"
-
-  # Create a role for authorized acces to AWS resources. 
+              - Effect: Allow
+                Action:
+                  - iot:Receive
+                Resource: !Join [ "", [ "arn:aws:iot:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":topic/*" ] ]
+              
+  # Create a role for authorized access to AWS resources. 
   CognitoAuthorizedRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -95,10 +110,20 @@ Resources:
             Statement: 
               - Effect: "Allow"
                 Action:
-                  - "mobileanalytics:PutEvents"
                   - "cognito-sync:*"
-                  - "cognito-identity:*"
+                Resource: !Join [ "", [ "arn:aws:cognito-sync:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":identitypool/", !Ref IdentityPool] ]
+              - Effect: Allow
+                Action:
+                  - iot:Connect
+                Resource: !Join [ "", [ "arn:aws:iot:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":client/askAroundMe-*" ] ]
+              - Effect: Allow
+                Action:
+                  - iot:Subscribe
                 Resource: "*"
+              - Effect: Allow
+                Action:
+                  - iot:Receive
+                Resource: !Join [ "", [ "arn:aws:iot:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":topic/*" ] ]
 
   # Assigns the roles to the Identity Pool
   IdentityPoolRoleMapping:

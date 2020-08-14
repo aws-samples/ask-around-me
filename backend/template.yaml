@@ -26,7 +26,7 @@ Parameters:
   Auth0issuer:
     Type: String
     Description: The issuer URL from your Auth0 account.
-    Default: https://dev-xxxxxxxx.auth0.com/
+    Default: https://dev-xxxxxxxx.us.auth0.com/
 
 Globals:
   Function:

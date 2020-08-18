@@ -25,6 +25,18 @@ Important: this application uses various AWS services and there are costs associ
 * [Google Maps API key](https://developers.google.com/maps/documentation/javascript/get-api-key)
 * Sign up for an [Auth0 account](https://auth0.com/)
 
+## Auth0 configuration
+
+1. Sign up for an Auth0 account at https://auth0.com.
+2. Select Applications from the menu, then choose **Create Application**.
+3. Enter the name *Ask Around Me* and select *Single Page Web Applications* for application type. Choose **Create**.
+4. Select the *Settings* tab, and note the `Domain` and `ClientID` for installation of the application backend and frontend.
+5. Under *Allowed Callback URLs*, *Allowed Logout URLs* and *Allowed Web Origins* and *Allowed Origins (CORS)*, enter **http://localhost:8080**. Choose **Save Changes**.
+6. Select APIS from the menu, then choose **Create API**.
+7. Enter the name *Ask Around Me*, and set the *Identifier* to **https://auth0-jwt-authorizer**. Choose **Create**.
+
+Auth0 is now configured for you to use. The backend uses the `domain` value to validate the JWT token. The frontend uses the identifier (also known as the audience), together with the *Client ID* to validate authentication for this single application. For more information, see the [Auth0 documentation](https://auth0.com/docs/api/authentication).
+
 ## Installation Instructions
 
 1. [Create an AWS account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html) if you do not already have one and login.

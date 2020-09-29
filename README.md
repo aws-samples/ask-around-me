@@ -7,6 +7,8 @@ To learn more about how this application works, see the 3-part series on the AWS
 - Part 2: https://aws.amazon.com/blogs/compute/building-a-location-based-scalable-serverless-web-app-part-2/.
 - Part 3: https://aws.amazon.com/blogs/compute/building-a-location-based-scalable-serverless-web-app-part-3/.
 
+:tv: *Watch the YouTube video series at https://www.youtube.com/playlist?list=PL5bUlblGfe0JGBGjta0ASAN3h-gykxc6t.*
+
 Important: this application uses various AWS services and there are costs associated with these services after the Free Tier usage - please see the [AWS Pricing page](https://aws.amazon.com/pricing/) for details. You are responsible for any AWS costs incurred. No warranty is implied in this example.
 
 ```bash
